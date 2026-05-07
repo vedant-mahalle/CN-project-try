@@ -21,27 +21,33 @@ export function LoginForm() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate login - in production, use Supabase auth
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
 
-    // Store mock user in localStorage for demo
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: "user-1",
-        email,
-        fullName: "Demo User",
-        role: "interviewer",
-      }),
-    )
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to sign in")
+      }
 
-    toast({
-      title: "Welcome back!",
-      description: "You have successfully signed in.",
-    })
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      })
 
-    router.push("/dashboard")
-    setIsLoading(false)
+      router.push("/dashboard")
+    } catch (error) {
+      toast({
+        title: "Sign in failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

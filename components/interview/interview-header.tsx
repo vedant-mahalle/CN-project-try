@@ -31,10 +31,11 @@ export function InterviewHeader({
   const { toast } = useToast()
 
   const copyRoomCode = () => {
-    navigator.clipboard.writeText(roomCode)
+    // Copy the full shareable URL so participants can join directly
+    navigator.clipboard.writeText(window.location.href)
     toast({
-      title: "Room code copied",
-      description: "Share this code with participants to join.",
+      title: "Room link copied",
+      description: "Share this link with participants to join.",
     })
   }
 
@@ -51,9 +52,9 @@ export function InterviewHeader({
         </div>
         <div className="h-6 w-px bg-border" />
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Room:</span>
-          <code className="px-2 py-1 bg-muted rounded text-sm font-mono">{roomCode}</code>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={copyRoomCode}>
+          <span className="text-sm text-muted-foreground">Room ID:</span>
+          <code className="px-2 py-1 bg-muted rounded text-sm font-mono">{roomCode.slice(0, 8)}…</code>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Copy room link" onClick={copyRoomCode}>
             <Copy className="h-4 w-4" />
           </Button>
         </div>

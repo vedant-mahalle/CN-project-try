@@ -18,9 +18,26 @@ export function JoinInterviewDialog({ open, onOpenChange }: JoinInterviewDialogP
   const router = useRouter()
   const [roomCode, setRoomCode] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    router.push(`/interview/${roomCode.toUpperCase()}`)
+    const normalizedRoomCode = roomCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "")
+    if (!normalizedRoomCode) return
+
+    // Register the room code to get its hashed URL token so the plain code is not in the URL
+    let urlToken = normalizedRoomCode
+    try {
+      const res = await fetch("/api/interview/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomCode: normalizedRoomCode }),
+      })
+      const data = await res.json()
+      if (res.ok && data.urlToken) urlToken = data.urlToken
+    } catch {
+      // Fall back to plain room code
+    }
+
+    router.push(`/interview/${urlToken}`)
     onOpenChange(false)
   }
 

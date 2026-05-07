@@ -34,8 +34,13 @@ export default function HomePage() {
           in one platform.
         </p>
         <div className="mt-10 flex items-center justify-center gap-4">
-          <Link href="/register">
+          <Link href="/interview/DEMO123">
             <Button size="lg" className="h-12 px-8">
+              Join Interview Now
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button size="lg" variant="outline" className="h-12 px-8 bg-transparent">
               Start Free Trial
             </Button>
           </Link>

@@ -15,7 +15,11 @@ interface CreateInterviewDialogProps {
 }
 
 function generateRoomCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
+  const bytes = crypto.getRandomValues(new Uint8Array(6))
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  return Array.from(bytes)
+    .map((value) => alphabet[value % alphabet.length])
+    .join("")
 }
 
 export function CreateInterviewDialog({ open, onOpenChange, onSubmit }: CreateInterviewDialogProps) {
@@ -26,12 +30,30 @@ export function CreateInterviewDialog({ open, onOpenChange, onSubmit }: CreateIn
     scheduledAt: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const roomCode = generateRoomCode()
+
+    // Register the room code server-side to get a hashed URL token.
+    // This means the browser URL shows /interview/<hash> instead of the plain code.
+    let urlToken = roomCode
+    try {
+      const res = await fetch("/api/interview/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomCode }),
+      })
+      const data = await res.json()
+      if (res.ok && data.urlToken) urlToken = data.urlToken
+    } catch {
+      // Fall back to plain room code in the URL if registration fails
+    }
+
     const interview = {
       id: Date.now().toString(),
       ...formData,
-      roomCode: generateRoomCode(),
+      roomCode,
+      urlToken,
       status: "scheduled",
     }
     onSubmit(interview)

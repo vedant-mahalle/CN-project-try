@@ -21,6 +21,7 @@ interface SignalPayload {
 
 export function VideoPanel({ roomCode }: VideoPanelProps) {
   const socketRef = useRef<Socket | null>(null)
+  const resolvedRoomCodeRef = useRef<string>(roomCode)
     const peerConnectionsRef = useRef<PeerConnectionMap>(new Map())
     const cameraStreamRef = useRef<MediaStream | null>(null)
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -207,6 +208,22 @@ export function VideoPanel({ roomCode }: VideoPanelProps) {
         cameraStreamRef.current = stream
         setLocalVideo(stream)
 
+        const roomTokenResponse = await fetch("/api/interview/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomCode }),
+        })
+
+        const roomTokenData = await roomTokenResponse.json()
+        if (!roomTokenResponse.ok || !roomTokenData.token) {
+          setError(roomTokenData.error || "Unable to join this room")
+          return
+        }
+
+        // The API resolves the URL token (hash) to the actual room code for socket routing
+        const resolvedRoomCode: string = roomTokenData.roomCode ?? roomCode
+        resolvedRoomCodeRef.current = resolvedRoomCode
+
         await fetch("/api/socket")
 
         const socket = io({
@@ -218,7 +235,7 @@ export function VideoPanel({ roomCode }: VideoPanelProps) {
         socketRef.current = socket
 
         socket.on("connect", () => {
-          socket.emit("join-room", { roomCode, displayName })
+          socket.emit("join-room", { roomCode: resolvedRoomCode, displayName, token: roomTokenData.token })
         })
 
         socket.on("participants", (participants: { id: string; displayName: string }[]) => {
@@ -272,7 +289,7 @@ export function VideoPanel({ roomCode }: VideoPanelProps) {
 
     return () => {
       isMounted = false
-      socketRef.current?.emit("leave-room", { roomCode })
+      socketRef.current?.emit("leave-room", { roomCode: resolvedRoomCodeRef.current })
       socketRef.current?.disconnect()
       socketRef.current = null
       const cameraStream = cameraStreamRef.current

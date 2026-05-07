@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { VideoPanel } from "./video-panel"
 import { CodeEditor } from "./code-editor"
 import { QuestionsPanel } from "./questions-panel"
@@ -123,8 +122,7 @@ interface InterviewRoomProps {
 }
 
 export function InterviewRoom({ roomCode }: InterviewRoomProps) {
-  const searchParams = useSearchParams()
-  const role = (searchParams.get("role") as "interviewer" | "candidate" | null) ?? "candidate"
+  const [role] = useState<"interviewer" | "candidate">("candidate")
   const isInterviewer = role === "interviewer"
 
   const [selectedQuestion, setSelectedQuestion] = useState<Question>(sampleQuestions[0])
@@ -264,7 +262,7 @@ export function InterviewRoom({ roomCode }: InterviewRoomProps) {
             <TabsContent value="code" className="flex-1 m-0 overflow-hidden">
               <div className="h-full overflow-auto bg-muted/30 p-3 font-mono text-sm">
                 <div className="mb-2 text-xs uppercase text-muted-foreground">Candidate code (local view)</div>
-                <pre className="whitespace-pre-wrap break-words">{code}</pre>
+                <pre className="whitespace-pre-wrap wrap-break-word">{code}</pre>
               </div>
             </TabsContent>
           </Tabs>

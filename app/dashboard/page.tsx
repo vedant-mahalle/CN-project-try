@@ -20,6 +20,7 @@ interface Interview {
   id: string
   title: string
   roomCode: string
+  urlToken?: string
   status: string
   scheduledAt: string
   candidateName?: string
@@ -52,17 +53,39 @@ export default function DashboardPage() {
   const [showJoinDialog, setShowJoinDialog] = useState(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (!storedUser) {
-      router.push("/login")
-      return
+    let cancelled = false
+
+    const loadUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { method: "GET" })
+        const data = await response.json()
+
+        if (!response.ok || !data.authenticated) {
+          router.push("/login")
+          return
+        }
+
+        if (!cancelled) {
+          setUser(data.user)
+        }
+      } catch {
+        router.push("/login")
+      }
     }
-    setUser(JSON.parse(storedUser))
+
+    void loadUser()
+
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("user")
-    router.push("/")
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } finally {
+      router.push("/")
+    }
   }
 
   const handleCreateInterview = (interview: Interview) => {
@@ -174,7 +197,7 @@ export default function DashboardPage() {
                       {interview.status}
                     </span>
                     {interview.status === "scheduled" && (
-                      <Link href={`/interview/${interview.roomCode}`}>
+                      <Link href={`/interview/${interview.urlToken ?? interview.roomCode}`}>
                         <Button size="sm">
                           <Video className="h-4 w-4 mr-2" />
                           Join

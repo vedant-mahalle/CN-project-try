@@ -1,6 +1,7 @@
 import type { NextApiRequest } from "next"
 import { Server as IOServer } from "socket.io"
 import type { NextApiResponseServerIO } from "@/types/next"
+import { sanitizeRoomCode, verifySignedToken } from "@/lib/security"
 
 export const config = {
   api: {
@@ -10,6 +11,7 @@ export const config = {
 
 type JoinPayload = {
   roomCode: string
+  token: string
   displayName?: string
 }
 
@@ -54,12 +56,21 @@ export default function handler(req: NextApiRequest, res: NextApiResponseServerI
     }
 
     io.on("connection", (socket) => {
-      socket.on("join-room", ({ roomCode, displayName }: JoinPayload) => {
+      socket.on("join-room", ({ roomCode, token, displayName }: JoinPayload) => {
         if (!roomCode) return
-        socket.data.roomCode = roomCode
+        const normalizedRoomCode = sanitizeRoomCode(roomCode)
+        const roomToken = verifySignedToken<{ type: "room"; roomCode: string; sub: string; exp: number }>(
+          token,
+        )
+
+        if (!roomToken.valid || !roomToken.payload) return
+        if (roomToken.payload.type !== "room") return
+        if (roomToken.payload.roomCode !== normalizedRoomCode) return
+
+        socket.data.roomCode = normalizedRoomCode
         socket.data.displayName = displayName || "Guest"
-        socket.join(roomCode)
-        const participants: ParticipantInfo[] = Array.from(io.sockets.adapter.rooms.get(roomCode) ?? [])
+        socket.join(normalizedRoomCode)
+        const participants: ParticipantInfo[] = Array.from(io.sockets.adapter.rooms.get(normalizedRoomCode) ?? [])
           .filter((memberId) => memberId !== socket.id)
           .map((memberId) => {
             const memberSocket = io.sockets.sockets.get(memberId)
@@ -69,7 +80,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponseServerI
             }
           })
         socket.emit("participants", participants)
-        socket.to(roomCode).emit("participant-joined", {
+        socket.to(normalizedRoomCode).emit("participant-joined", {
           id: socket.id,
           displayName: socket.data.displayName,
         } as ParticipantInfo)

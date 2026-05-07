@@ -26,26 +26,33 @@ export function RegisterForm() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate registration - in production, use Supabase auth
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
 
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: "user-1",
-        email: formData.email,
-        fullName: formData.fullName,
-        role: formData.role,
-      }),
-    )
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create account")
+      }
 
-    toast({
-      title: "Account created!",
-      description: "Welcome to CodeInterview.",
-    })
+      toast({
+        title: "Account created!",
+        description: "Welcome to CodeInterview.",
+      })
 
-    router.push("/dashboard")
-    setIsLoading(false)
+      router.push("/dashboard")
+    } catch (error) {
+      toast({
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -83,6 +90,9 @@ export function RegisterForm() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Min 10 characters with uppercase, lowercase, number, and special character.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="role">I am a</Label>
